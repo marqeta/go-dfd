@@ -1,0 +1,8 @@
+# Keep a couple of dot files around for now, but ignore the rest
+*.dot
+*.dot.bk
+*.pdf
+*.png
+*.gv
+dfd/dfd
+main.go
