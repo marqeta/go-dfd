@@ -23,24 +23,6 @@ type DataFlowDiagram struct {
 	Flows            map[string]*Flow
 }
 
-// Node circle
-type Process struct {
-	*dotNode
-	Name string
-}
-
-// Node diamond
-type ExternalService struct {
-	*dotNode
-	Name string
-}
-
-// Node cylinder
-type DataStore struct {
-	*dotNode
-	Name string
-}
-
 // Subgraph
 type TrustBoundary struct {
 	*subGraph
@@ -84,7 +66,7 @@ func InitializeDFD(name string) *DataFlowDiagram {
 	return dfd
 }
 
-// This method is used when loading a DFD from a DOT file, where an ID is already given
+// DeserializeDFD is used when loading a DFD from a DOT file, where an ID is already given
 func DeserializeDFD(id string) *DataFlowDiagram {
 	return &DataFlowDiagram{
 		Processes:        make(map[string]*Process),
@@ -98,7 +80,7 @@ func DeserializeDFD(id string) *DataFlowDiagram {
 	}
 }
 
-// This method is used when loading a DFD from a DOT file, where an ID is already given
+// DeserializeTrustBoundary is used when loading a DFD from a DOT file, where an ID is already given
 func DeserializeTrustBoundary(id string) *TrustBoundary {
 	return &TrustBoundary{
 		Processes:        make(map[string]*Process),
@@ -110,7 +92,6 @@ func DeserializeTrustBoundary(id string) *TrustBoundary {
 	}
 }
 
-// FIXME this should only conditionally generate a new ID
 func InitializeTrustBoundary(name string) *TrustBoundary {
 	tb := &TrustBoundary{
 		Name:             name,
@@ -125,64 +106,9 @@ func InitializeTrustBoundary(name string) *TrustBoundary {
 	return tb
 }
 
-func DeserializeProcess(id string) *Process {
-	xid64, _ := strconv.ParseInt(id, 10, 64)
-	n := &Process{dotNode: &dotNode{Node: simple.Node(xid64)}}
-	n.SetDOTID(id)
-	return n
-}
-
-func NewProcess(name string) *Process {
-	xid := genID()
-	xid64, _ := strconv.ParseInt(xid, 10, 64)
-	p := &Process{Name: name, dotNode: &dotNode{Node: simple.Node(xid64)}}
-	p.SetDOTID(xid)
-	p.Label = strconv.Quote(name)
-	p.Shape = "circle"
-	p.Name = name
-	return p
-}
-
-func NewExternalService(name string) *ExternalService {
-	xid := genID()
-	xid64, _ := strconv.ParseInt(xid, 10, 64)
-	es := &ExternalService{Name: name, dotNode: &dotNode{Node: simple.Node(xid64)}}
-	es.SetDOTID(xid)
-	es.Label = strconv.Quote(name)
-	es.Shape = "diamond"
-	es.Name = name
-	return es
-}
-
-func DeserializeExternalService(id string) *ExternalService {
-	xid64, _ := strconv.ParseInt(id, 10, 64)
-	n := &ExternalService{dotNode: &dotNode{Node: simple.Node(xid64)}}
-	n.SetDOTID(id)
-	return n
-}
-
-func NewDataStore(name string) *DataStore {
-	xid := genID()
-	xid64, _ := strconv.ParseInt(xid, 10, 64)
-	ds := &DataStore{Name: name, dotNode: &dotNode{Node: simple.Node(xid64)}}
-	ds.SetDOTID(xid)
-	ds.Label = strconv.Quote(name)
-	ds.Shape = "cylinder"
-	ds.Name = name
-	return ds
-}
-
-func DeserializeDataStore(id string) *DataStore {
-	xid64, _ := strconv.ParseInt(id, 10, 64)
-	n := &DataStore{dotNode: &dotNode{Node: simple.Node(xid64)}}
-	n.SetDOTID(id)
-	return n
-}
-
-// FIXME This method assumes that all Nodes have unique IDs. This *should* be
-// true, but further testing is required to really make this claim. It takes a
-// brute force approach and runs in O(n). In the worst case, it will have to
-// visit every node in the DFD
+// FindNode looks for a node with a given id in either the top level graph or a
+// subgraph. It assumes that all Nodes have unique IDs. This *should* be true,
+// but further testing is required to really make this claim.
 func (g *DataFlowDiagram) FindNode(id string) graph.Node {
 	if n, ok := g.Processes[id]; ok {
 		return n
@@ -199,6 +125,9 @@ func (g *DataFlowDiagram) FindNode(id string) graph.Node {
 	return nil
 }
 
+// FindNode looks for a node with a given id It assumes that all Nodes have
+// unique IDs. This *should* be true, but further testing is required to really
+// make this claim.
 func (g *TrustBoundary) FindNode(id string) graph.Node {
 	if n, ok := g.Processes[id]; ok {
 		return n
@@ -216,52 +145,6 @@ func (dfd *DataFlowDiagram) ToDOT() error {
 
 func (dfd *DataFlowDiagram) GetTrustBoundary(id string) *TrustBoundary {
 	return dfd.TrustBoundaries[id]
-}
-
-func (dfd *DataFlowDiagram) setAttributes() {
-	graph_setter, node_setter, edge_setter := dfd.DOTAttributeSetters()
-	dfd.graph = nil
-	dfd.node = nil
-	dfd.edge = nil
-	for _, attr := range dfd.graphAttributes() {
-		graph_setter.SetAttribute(attr)
-	}
-
-	for _, attr := range dfd.nodeAttributes() {
-		node_setter.SetAttribute(attr)
-	}
-
-	for _, attr := range dfd.edgeAttributes() {
-		edge_setter.SetAttribute(attr)
-	}
-	return
-}
-
-func (dfd *DataFlowDiagram) graphAttributes() []encoding.Attribute {
-	attrs := make([]encoding.Attribute, 7)
-	attrs[0] = makeAttribute("label", dfd.Name)
-	attrs[1] = makeAttribute("fontname", "Arial")
-	attrs[2] = makeAttribute("fontsize", "14")
-	attrs[3] = makeAttribute("labelloc", "t")
-	attrs[4] = makeAttribute("fontsize", "20")
-	attrs[5] = makeAttribute("nodesep", "1")
-	attrs[6] = makeAttribute("rankdir", "t")
-	return attrs
-}
-
-func (dfd *DataFlowDiagram) nodeAttributes() []encoding.Attribute {
-	attrs := make([]encoding.Attribute, 2)
-	attrs[0] = makeAttribute("fontname", "Arial")
-	attrs[1] = makeAttribute("fontsize", "14")
-	return attrs
-}
-
-func (dfd *DataFlowDiagram) edgeAttributes() []encoding.Attribute {
-	attrs := make([]encoding.Attribute, 3)
-	attrs[0] = makeAttribute("shape", "none")
-	attrs[1] = makeAttribute("fontname", "Arial")
-	attrs[2] = makeAttribute("fontsize", "12")
-	return attrs
 }
 
 func (dfd *DataFlowDiagram) ExternalID() string {
@@ -283,7 +166,7 @@ func (g *DataFlowDiagram) AddNodeElem(n graph.Node) {
 	case *DataStore:
 		g.AddDataStore(el)
 	default:
-		panic(fmt.Sprintf("Unknown node type %T", g))
+		panic(fmt.Sprintf("Unknown node type %T", el))
 	}
 	g.AddNode(n)
 	return
@@ -341,6 +224,51 @@ func (g *DataFlowDiagram) Structure() []dot.Graph {
 	return graphs
 }
 
+func (dfd *DataFlowDiagram) setAttributes() {
+	graph_setter, node_setter, edge_setter := dfd.DOTAttributeSetters()
+	dfd.graph = nil
+	dfd.node = nil
+	dfd.edge = nil
+	for _, attr := range dfd.graphAttributes() {
+		graph_setter.SetAttribute(attr)
+	}
+
+	for _, attr := range dfd.nodeAttributes() {
+		node_setter.SetAttribute(attr)
+	}
+
+	for _, attr := range dfd.edgeAttributes() {
+		edge_setter.SetAttribute(attr)
+	}
+	return
+}
+
+func (dfd *DataFlowDiagram) graphAttributes() []encoding.Attribute {
+	attrs := make([]encoding.Attribute, 7)
+	attrs[0] = makeAttribute("label", dfd.Name)
+	attrs[1] = makeAttribute("fontname", "Arial")
+	attrs[2] = makeAttribute("fontsize", "14")
+	attrs[3] = makeAttribute("labelloc", "t")
+	attrs[4] = makeAttribute("fontsize", "20")
+	attrs[5] = makeAttribute("nodesep", "1")
+	attrs[6] = makeAttribute("rankdir", "t")
+	return attrs
+}
+
+func (dfd *DataFlowDiagram) nodeAttributes() []encoding.Attribute {
+	attrs := make([]encoding.Attribute, 2)
+	attrs[0] = makeAttribute("fontname", "Arial")
+	attrs[1] = makeAttribute("fontsize", "14")
+	return attrs
+}
+
+func (dfd *DataFlowDiagram) edgeAttributes() []encoding.Attribute {
+	attrs := make([]encoding.Attribute, 3)
+	attrs[0] = makeAttribute("shape", "none")
+	attrs[1] = makeAttribute("fontname", "Arial")
+	attrs[2] = makeAttribute("fontsize", "12")
+	return attrs
+}
 func (sg *TrustBoundary) ExternalID() string {
 	return sg.id
 }
@@ -436,44 +364,6 @@ func (g *DataFlowDiagram) RemoveFlow(src_id, dest_id string) {
 	delete(g.Flows, fmt.Sprintf("%s%s", src_id, dest_id))
 	g.RemoveEdge(idToID64(src_id), idToID64(dest_id))
 	return
-}
-
-func (p *Process) DOTID() string {
-	return fmt.Sprintf("process_%s", p.dotID)
-}
-
-func (p *Process) ExternalID() string {
-	return p.dotID
-}
-
-func (n *Process) UpdateName(new_name string) {
-	n.Name = new_name
-	n.Label = strconv.Quote(new_name)
-	return
-}
-
-func (es *ExternalService) DOTID() string {
-	return fmt.Sprintf("externalservice_%s", es.dotID)
-}
-
-func (n *ExternalService) UpdateName(new_name string) {
-	n.Name = new_name
-	n.Label = strconv.Quote(new_name)
-	return
-}
-
-func (n *DataStore) UpdateName(new_name string) {
-	n.Name = new_name
-	n.Label = strconv.Quote(new_name)
-	return
-}
-
-func (n *DataStore) ExternalID() string {
-	return n.dotID
-}
-
-func (n *DataStore) DOTID() string {
-	return fmt.Sprintf("datastore_%s", n.dotID)
 }
 
 func (f *Flow) Attributes() []encoding.Attribute {

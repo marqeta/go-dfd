@@ -1,0 +1,16 @@
+kind: pipeline
+name: default
+
+steps:
+  - name: vet
+    image: golang:1.11-stretch
+    pull: always
+    commands:
+      - go get gonum.org/v1/gonum/graph
+      - cd dfd && go vet
+  - name: test
+    image: golang:1.11-stretch
+    pull: always
+    commands:
+      - go get gonum.org/v1/gonum/graph
+      - cd dfd && go test -cover
