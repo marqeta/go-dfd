@@ -65,14 +65,14 @@ func (client *Client) DFDFromDOT() (encoding.Builder, error) {
 	return dst, nil
 }
 
-func (client *Client) DFDToDOT(dfd encoding.Builder) error {
+func (client *Client) DFDToDOT(dfd encoding.Builder) (string, error) {
 	mutex := &sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
 	got, err := client.marshal(dfd)
 	if err != nil {
 		fmt.Println(err)
-		return err
+		return "", err
 	}
 
 	f, err := os.OpenFile(client.Config.DOTPath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0660)
@@ -81,14 +81,11 @@ func (client *Client) DFDToDOT(dfd encoding.Builder) error {
 	}
 	defer f.Close()
 
-	nbytes, err := f.Write(got)
+	_, err = f.Write(got)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("[INFO] %d bytes written\n", nbytes)
-
-	fmt.Println(string(got))
-	return nil
+	return string(got), nil
 }
 
 // Wrapper function for Marshal method in the dot package
