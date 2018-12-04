@@ -6,3 +6,4 @@
 *.gv
 dfd/dfd
 main.go
+.DS_Store

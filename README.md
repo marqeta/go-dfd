@@ -26,25 +26,26 @@ func main() {
 
 // You can write out Data Flow Diagram objects to DOT files
 func toDOT(client *dfd.Client) {
-	graph := dfd.InitializeDFD("WebApp Thing")
-	p := dfd.NewProcess("Google Analytics")
-	graph.AddNodeElem(p)
+	graph := dfd.InitializeDFD("My WebApp")
+	google := dfd.NewExternalService("Google Analytics")
+	graph.AddNodeElem(google)
 
 	external_tb, _ := graph.AddTrustBoundary("Browser")
 	pclient := dfd.NewProcess("Client")
 	external_tb.AddNodeElem(pclient)
-	db := dfd.NewDataStore("sqlite")
-	external_tb.AddNodeElem(db)
-	graph.AddFlow(pclient, db, "HTTP")
+	graph.AddFlow(pclient, google, "HTTPS")
 
 	aws_tb, _ := graph.AddTrustBoundary("AWS")
 	ws := dfd.NewProcess("Web Server")
 	aws_tb.AddNodeElem(ws)
-	logs := dfd.NewExternalService("Logs")
+	logs := dfd.NewDataStore("Logs")
 	aws_tb.AddNodeElem(logs)
 	graph.AddFlow(ws, logs, "TCP")
+	db := dfd.NewDataStore("sqlite")
+	aws_tb.AddNodeElem(db)
 	graph.AddFlow(pclient, ws, "HTTPS")
-	graph.AddFlow(pclient, logs, "HTTPS")
+	graph.AddFlow(ws, logs, "HTTPS")
+	graph.AddFlow(ws, db, "HTTP")
 
 	client.DFDToDOT(graph)
 }
@@ -57,4 +58,4 @@ func fromDOT(client *dfd.Client) {
 
 The above code will generate a file at `/path/to/dfd.dot` which, when rendered with GraphViz, looks like the example provided below.
 
-![scratch](https://user-images.githubusercontent.com/647423/49312152-dc269800-f4a8-11e8-825d-58c05144945f.png)
+![scratch](https://user-images.githubusercontent.com/647423/49473808-ad762d80-f7d8-11e8-820e-538b2d4c152b.png)
