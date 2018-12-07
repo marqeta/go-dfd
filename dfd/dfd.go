@@ -3,6 +3,7 @@ package dfd
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
@@ -21,6 +22,8 @@ type DataFlowDiagram struct {
 	DataStores       map[string]*DataStore
 	TrustBoundaries  map[string]*TrustBoundary
 	Flows            map[string]*Flow
+
+	mtx sync.Mutex
 }
 
 // Subgraph
@@ -32,6 +35,8 @@ type TrustBoundary struct {
 	Processes        map[string]*Process
 	ExternalServices map[string]*ExternalService
 	DataStores       map[string]*DataStore
+
+	mtx sync.Mutex
 }
 
 // Edge
@@ -41,9 +46,9 @@ type Flow struct {
 
 type DfdGraph interface {
 	AddNodeElem(graph.Node)
-	AddProcess(*Process) error
-	AddExternalService(*ExternalService) error
-	AddDataStore(*DataStore) error
+	addProcess(*Process) error
+	addExternalService(*ExternalService) error
+	addDataStore(*DataStore) error
 
 	RemoveProcess(string)
 	RemoveExternalService(string)
@@ -158,13 +163,15 @@ func (dfd *DataFlowDiagram) UpdateName(new_name string) {
 }
 
 func (g *DataFlowDiagram) AddNodeElem(n graph.Node) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	switch el := n.(type) {
 	case *Process:
-		g.AddProcess(el)
+		g.addProcess(el)
 	case *ExternalService:
-		g.AddExternalService(el)
+		g.addExternalService(el)
 	case *DataStore:
-		g.AddDataStore(el)
+		g.addDataStore(el)
 	default:
 		panic(fmt.Sprintf("Unknown node type %T", el))
 	}
@@ -172,46 +179,56 @@ func (g *DataFlowDiagram) AddNodeElem(n graph.Node) {
 	return
 }
 
-func (g *DataFlowDiagram) AddProcess(p *Process) error {
+func (g *DataFlowDiagram) addProcess(p *Process) error {
 	g.Processes[p.ExternalID()] = p
 	return nil
 }
 
 func (g *DataFlowDiagram) RemoveProcess(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.Processes, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
-func (g *DataFlowDiagram) AddExternalService(es *ExternalService) error {
+func (g *DataFlowDiagram) addExternalService(es *ExternalService) error {
 	g.ExternalServices[es.ExternalID()] = es
 	return nil
 }
 
 func (g *DataFlowDiagram) RemoveExternalService(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.ExternalServices, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
-func (g *DataFlowDiagram) AddDataStore(es *DataStore) error {
+func (g *DataFlowDiagram) addDataStore(es *DataStore) error {
 	g.DataStores[es.ExternalID()] = es
 	return nil
 }
 
 func (g *DataFlowDiagram) RemoveDataStore(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.DataStores, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
 func (dfd *DataFlowDiagram) AddTrustBoundary(name string) (*TrustBoundary, error) {
+	dfd.mtx.Lock()
+	defer dfd.mtx.Unlock()
 	tb := InitializeTrustBoundary(name)
 	dfd.TrustBoundaries[tb.ExternalID()] = tb
 	return dfd.TrustBoundaries[tb.ExternalID()], nil
 }
 
 func (g *DataFlowDiagram) RemoveTrustBoundary(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.TrustBoundaries, id)
 	return
 }
@@ -305,13 +322,15 @@ func (sg *TrustBoundary) UpdateName(new_name string) {
 }
 
 func (g *TrustBoundary) AddNodeElem(n graph.Node) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	switch el := n.(type) {
 	case *Process:
-		g.AddProcess(el)
+		g.addProcess(el)
 	case *ExternalService:
-		g.AddExternalService(el)
+		g.addExternalService(el)
 	case *DataStore:
-		g.AddDataStore(el)
+		g.addDataStore(el)
 	default:
 		panic(fmt.Sprintf("Unknown node type %T", g))
 	}
@@ -319,40 +338,48 @@ func (g *TrustBoundary) AddNodeElem(n graph.Node) {
 	return
 }
 
-func (g *TrustBoundary) AddProcess(p *Process) error {
+func (g *TrustBoundary) addProcess(p *Process) error {
 	g.Processes[p.ExternalID()] = p
 	return nil
 }
 
 func (g *TrustBoundary) RemoveProcess(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.Processes, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
-func (g *TrustBoundary) AddExternalService(es *ExternalService) error {
+func (g *TrustBoundary) addExternalService(es *ExternalService) error {
 	g.ExternalServices[es.ExternalID()] = es
 	return nil
 }
 
 func (g *TrustBoundary) RemoveExternalService(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.ExternalServices, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
-func (g *TrustBoundary) AddDataStore(es *DataStore) error {
+func (g *TrustBoundary) addDataStore(es *DataStore) error {
 	g.DataStores[es.ExternalID()] = es
 	return nil
 }
 
 func (g *TrustBoundary) RemoveDataStore(id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.DataStores, id)
 	g.RemoveNode(idToID64(id))
 	return
 }
 
 func (g *DataFlowDiagram) AddFlow(f graph.Node, t graph.Node, name string) *Flow {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	flow := &Flow{dotEdge: &dotEdge{Label: formatFlowLabel(name), Edge: g.DirectedGraph.NewEdge(f, t)}}
 	flow_id := genFlowID(f, t)
 	g.SetEdge(flow)
@@ -361,6 +388,8 @@ func (g *DataFlowDiagram) AddFlow(f graph.Node, t graph.Node, name string) *Flow
 }
 
 func (g *DataFlowDiagram) RemoveFlow(src_id, dest_id string) {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	delete(g.Flows, fmt.Sprintf("%s%s", src_id, dest_id))
 	g.RemoveEdge(idToID64(src_id), idToID64(dest_id))
 	return
