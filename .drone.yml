@@ -8,6 +8,12 @@ steps:
     commands:
       - go get gonum.org/v1/gonum/graph
       - cd dfd && go vet
+  - name: race
+    image: golang:1.11-stretch
+    pull: always
+    commands:
+      - go get gonum.org/v1/gonum/graph
+      - cd dfd && go test -race
   - name: test
     image: golang:1.11-stretch
     pull: always

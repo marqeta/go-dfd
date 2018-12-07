@@ -169,3 +169,25 @@ func TestTrustBoundaryAddNodeElem(t *testing.T) {
 		})
 	}
 }
+
+func TestDFDAddRemoveFlowRace(t *testing.T) {
+	g := InitializeDFD("test")
+	for i := 0; i < 5; i++ {
+		go func() {
+			p1 := NewProcess("p1")
+			p2 := NewProcess("p2")
+			g.AddFlow(p1, p2, "foo")
+			g.RemoveFlow(p1.DOTID(), p2.DOTID())
+		}()
+	}
+}
+
+func TestDFDAddNodeRace(t *testing.T) {
+	g := InitializeDFD("test")
+	for i := 0; i < 5; i++ {
+		go func() {
+			p1 := NewProcess("p1")
+			g.AddNodeElem(p1)
+		}()
+	}
+}
