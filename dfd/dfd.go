@@ -3,17 +3,15 @@ package dfd
 import (
 	"fmt"
 	"strconv"
-	"sync"
 
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding"
 	"gonum.org/v1/gonum/graph/encoding/dot"
-	"gonum.org/v1/gonum/graph/simple"
 )
 
 // Graph
 type DataFlowDiagram struct {
-	*structuredGraph
+	*dfdGraph
 
 	Name string
 
@@ -22,21 +20,17 @@ type DataFlowDiagram struct {
 	DataStores       map[string]*DataStore
 	TrustBoundaries  map[string]*TrustBoundary
 	Flows            map[string]*Flow
-
-	mtx sync.Mutex
 }
 
 // Subgraph
 type TrustBoundary struct {
-	*subGraph
+	*dfdGraph
 
 	Name string
 
 	Processes        map[string]*Process
 	ExternalServices map[string]*ExternalService
 	DataStores       map[string]*DataStore
-
-	mtx sync.Mutex
 }
 
 // Edge
@@ -63,9 +57,7 @@ func InitializeDFD(name string) *DataFlowDiagram {
 		DataStores:       make(map[string]*DataStore),
 		Flows:            make(map[string]*Flow),
 		TrustBoundaries:  make(map[string]*TrustBoundary),
-		structuredGraph: &structuredGraph{
-			DirectedGraph: simple.NewDirectedGraph(), id: genID(),
-		},
+		dfdGraph:         NewDfdGraph(),
 	}
 	dfd.setAttributes()
 	return dfd
@@ -73,27 +65,27 @@ func InitializeDFD(name string) *DataFlowDiagram {
 
 // DeserializeDFD is used when loading a DFD from a DOT file, where an ID is already given
 func DeserializeDFD(id string) *DataFlowDiagram {
+	sg := NewDfdGraph()
+	sg.id = id
 	return &DataFlowDiagram{
 		Processes:        make(map[string]*Process),
 		ExternalServices: make(map[string]*ExternalService),
 		DataStores:       make(map[string]*DataStore),
 		Flows:            make(map[string]*Flow),
 		TrustBoundaries:  make(map[string]*TrustBoundary),
-		structuredGraph: &structuredGraph{
-			DirectedGraph: simple.NewDirectedGraph(), id: id,
-		},
+		dfdGraph:         sg,
 	}
 }
 
 // DeserializeTrustBoundary is used when loading a DFD from a DOT file, where an ID is already given
 func DeserializeTrustBoundary(id string) *TrustBoundary {
+	sg := NewDfdGraph()
+	sg.id = id
 	return &TrustBoundary{
 		Processes:        make(map[string]*Process),
 		ExternalServices: make(map[string]*ExternalService),
 		DataStores:       make(map[string]*DataStore),
-		subGraph: &subGraph{
-			DirectedGraph: simple.NewDirectedGraph(), id: id,
-		},
+		dfdGraph:         sg,
 	}
 }
 
@@ -103,9 +95,7 @@ func InitializeTrustBoundary(name string) *TrustBoundary {
 		Processes:        make(map[string]*Process),
 		ExternalServices: make(map[string]*ExternalService),
 		DataStores:       make(map[string]*DataStore),
-		subGraph: &subGraph{
-			DirectedGraph: simple.NewDirectedGraph(), id: genID(),
-		},
+		dfdGraph:         NewDfdGraph(),
 	}
 	tb.setAttributes()
 	return tb
@@ -234,6 +224,8 @@ func (g *DataFlowDiagram) RemoveTrustBoundary(id string) {
 }
 
 func (g *DataFlowDiagram) Structure() []dot.Graph {
+	g.mtx.Lock()
+	defer g.mtx.Unlock()
 	graphs := []dot.Graph{}
 	for _, tb := range g.TrustBoundaries {
 		graphs = append(graphs, tb)
@@ -380,7 +372,7 @@ func (g *TrustBoundary) RemoveDataStore(id string) {
 func (g *DataFlowDiagram) AddFlow(f graph.Node, t graph.Node, name string) *Flow {
 	g.mtx.Lock()
 	defer g.mtx.Unlock()
-	flow := &Flow{dotEdge: &dotEdge{Label: formatFlowLabel(name), Edge: g.DirectedGraph.NewEdge(f, t)}}
+	flow := &Flow{dotEdge: &dotEdge{Label: formatFlowLabel(name), Edge: g.NewEdge(f, t)}}
 	flow_id := genFlowID(f, t)
 	g.SetEdge(flow)
 	g.Flows[flow_id] = flow
@@ -415,4 +407,12 @@ func genFlowID(f graph.Node, t graph.Node) string {
 
 func formatFlowLabel(name string) string {
 	return fmt.Sprintf(`<<table border="0" cellborder="0" cellpadding="2"><tr><td><b>%s</b></td></tr></table>>`, name)
+}
+
+func (g *DataFlowDiagram) DOTID() string {
+	return g.id
+}
+
+func (g *TrustBoundary) DOTID() string {
+	return fmt.Sprintf("cluster_%s", g.id)
 }

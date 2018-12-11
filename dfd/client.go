@@ -90,8 +90,5 @@ func (client *Client) DFDToDOT(dfd encoding.Builder) (string, error) {
 
 // Wrapper function for Marshal method in the dot package
 func (client *Client) marshal(dfd encoding.Builder) ([]byte, error) {
-	// FIXME: This is a temporary fix. The underlying methods in the graph should be made threadsafe
-	dfd.(*DataFlowDiagram).mtx.Lock()
-	defer dfd.(*DataFlowDiagram).mtx.Unlock()
 	return dot.Marshal(dfd, "", "", "\t")
 }
