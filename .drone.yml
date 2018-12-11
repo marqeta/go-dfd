@@ -4,19 +4,25 @@ name: default
 steps:
   - name: vet
     image: golang:1.11-stretch
+    environment:
+      DEP_VERSION: 0.5.0
     pull: always
     commands:
-      - go get gonum.org/v1/gonum/graph
-      - cd dfd && go vet
+      - ./.prep_drone.sh
+      - go vet go-dfd/dfd
   - name: race
     image: golang:1.11-stretch
     pull: always
+    environment:
+      DEP_VERSION: 0.5.0
     commands:
-      - go get gonum.org/v1/gonum/graph
-      - cd dfd && go test -race
+      - ./.prep_drone.sh
+      - go test -race go-dfd/dfd
   - name: test
     image: golang:1.11-stretch
     pull: always
+    environment:
+      DEP_VERSION: 0.5.0
     commands:
-      - go get gonum.org/v1/gonum/graph
-      - cd dfd && go test -cover
+      - ./.prep_drone.sh
+      - go test -cover go-dfd/dfd
