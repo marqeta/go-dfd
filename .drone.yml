@@ -4,25 +4,19 @@ name: default
 steps:
   - name: vet
     image: golang:1.11-stretch
-    environment:
-      DEP_VERSION: 0.5.0
     pull: always
     commands:
-      - ./.prep_drone.sh
-      - go vet go-dfd/dfd
+      - go mod tidy
+      - go vet ./...
   - name: race
     image: golang:1.11-stretch
     pull: always
-    environment:
-      DEP_VERSION: 0.5.0
     commands:
-      - ./.prep_drone.sh
-      - go test -race go-dfd/dfd
+      - go mod tidy
+      - go test -race ./...
   - name: test
     image: golang:1.11-stretch
     pull: always
-    environment:
-      DEP_VERSION: 0.5.0
     commands:
-      - ./.prep_drone.sh
-      - go test -cover go-dfd/dfd
+      - go mod tidy
+      - go test -cover ./...
